@@ -180,7 +180,7 @@ to go
     ]
     if state = "first-weighing" [
       process-checkpoint weighing-processing-time "discharge" 14
-      ;; Set the gross weigh provided by the scale
+      ;; Set the gweigh provided by the scale
       set gross-weigth random-normal 65 2.5
     ]
     if state = "discharge" [
