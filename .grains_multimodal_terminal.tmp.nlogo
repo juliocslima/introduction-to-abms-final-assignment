@@ -1,5 +1,4 @@
-extensions [ queue ]
-
+; Global variables for processing times
 globals [
   ; phase counter
   all-phases
@@ -12,31 +11,35 @@ globals [
   ; Operation
   shift-change-period
 
+  ; Structure
+  x-entrance-gate-position
+  x-classification-position
+  x-first-weighing-position
+  x-unloader-position
+  x-second-weighing-position
+  x-exit-gate-position
+
   ; Times
-  shift-change-time
-  gate-processing-time
-  sample-classification-time
-  classification-processing-time
-  weighing-processing-time
-  discharge-processing-time
+  shift-change-time               ;; Time to execute the shift change process
+  gate-processing-time            ;; Time for execution of the truck entry or exit process
+  sampling-processing-time        ;; Time to execute the sampling process of the product to be unloaded
+  classification-processing-time  ;; Time to execute the classification process of the product to be unloaded
+  weighing-processing-time        ;; Time to execute the truck weighing process
+  unloading-processing-time       ;; Time to execute the truck unloading process
 
-  check-points
-  titles
-  phase            ;; keeps track of the phase
-  roads            ;; agentset containing the patches that are roads
-  speed-limit
+  check-points      ;; Points at the route where there are processes
+  phase             ;; keeps track of the phase
+  routes            ;; agentset containing the patches that are routes
 
-  processed-trucks
-  total-discharged-volume
+  ;; KPIs
+  processed-trucks           ;; Number of trucks that the processment was completed
+  total-unloaded-volume    ;; Amount of cargo that was unloaded
 
-  ; Queues
-  queue-entrance-gate
-  queue-sampling
-  queue-classification
-  queue-first-weighing
-  queue-discharge
-  queue-second-weighing
-  queue-exit-gate
+  net-weight-lst             ;; List that contain the net weight that was unloaded
+                             ;; for all trucks that the processing was completed
+
+  processing-time-lst        ;; List that contain the processing time for all trucks
+                             ;; that the processing was completed
 ]
 
 turtles-own [
@@ -47,13 +50,14 @@ turtles-own [
   speed                  ;; Average truck speed
   up-car?                ;; true if the turtle moves downwards and false if it moves to the right
   processing-start-time  ;; Processing start time
-  init-time
-  end-time
-  queue-position         ;; Queue position at checkpoint
+  start-time             ;; Truck processing start time
+  end-time               ;; Truck processing end time
+  classification-done    ;; Indicates if classification process is done
 ]
 
 patches-own [
-  check-point?    ;; true if the patch is at the intersection of two roads
+  check-point?        ;; Points at the route that have a process
+  automated-process?  ;; Processes that require no human intervention
 ]
 
 to setup
@@ -77,25 +81,25 @@ to setup-globals
 
   set shift-change-period false
 
+  set x-entrance-gate-position -16
+  set x-classification-position -8
+  set x-first-weighing-position 6
+  set x-unloader-position 14
+  set x-second-weighing-position 20
+  set x-exit-gate-position 28
+
   set shift-change-time 15
   set gate-processing-time 1
-  set sample-classification-time 6
-  set classification-processing-time 10
+  set sampling-processing-time 6
+  set classification-processing-time 15
   set weighing-processing-time 1
-  set discharge-processing-time 10
-
-  set queue-entrance-gate queue:create 0
-  set queue-sampling queue:create 0
-  set queue-classification queue:create 0
-  set queue-first-weighing queue:create 0
-  set queue-discharge queue:create 0
-  set queue-second-weighing queue:create 0
-  set queue-exit-gate queue:create 0
+  set unloading-processing-time 10
 
   set processed-trucks 0
-  set total-discharged-volume 0
+  set total-unloaded-volume 0
+  set net-weight-lst []
+  set processing-time-lst []
 
-  set speed-limit 1
   set phase-counter 1
 end
 
@@ -107,29 +111,35 @@ to setup-patches ;; patch procedure
     set pcolor brown + 3
   ]
   ;; initialize the global variables that hold patch agentsets
-  set roads patches with
+  set routes patches with
     [pycor < 2 and pycor > -2]
-  set check-points roads with [
-    (pxcor = -16 and pycor = 0) or
-    (pxcor = 0 and pycor = 0) or
-    (pxcor = 8 and pycor = 0) or
-    (pxcor = 14 and pycor = 0) or
-    (pxcor = 20 and pycor = 0) or
-    (pxcor = 28 and pycor = 0)
+  set check-points routes with [
+    (pxcor = x-entrance-gate-position and pycor = 0) or
+    (pxcor = x-classification-position and pycor = 0) or
+    (pxcor = x-first-weighing-position and pycor = 0) or
+    (pxcor = x-unloader-position and pycor = 0) or
+    (pxcor = x-second-weighing-position and pycor = 0) or
+    (pxcor = x-exit-gate-position and pycor = 0)
   ]
 
-  ask roads [ set pcolor gray ]
+  ask routes [ set pcolor gray ]
 
-  ask patch -14 1 [set plabel "Entrance Gate"]
-  ask patch 1 1 [set plabel "Classification"]
-  ask patch 9 -1 [set plabel "First Weighing"]
-  ask patch 15 1 [set plabel "Discharge"]
-  ask patch 21 -1 [set plabel "Second Weighing"]
-  ask patch 29 1 [set plabel "Exit Gate"]
+  ask patch (x-entrance-gate-position + 2) 1 [set plabel "Entrance Gate"]
+  ask patch (x-classification-position + 2) 1 [set plabel "Classification"]
+  ask patch (x-first-weighing-position + 2) -1 [set plabel "First Weighing"]
+  ask patch (x-unloader-position + 1) 1 [set plabel "Unloader"]
+  ask patch (x-second-weighing-position + 3) -1 [set plabel "Second Weighing"]
+  ask patch (x-exit-gate-position + 1) 1 [set plabel "Exit Gate"]
 
-  ;; Marca checkpoints
+  ask patch -19 7 [
+    set plabel "Grain Terminal (Basic Simulation)"
+    set plabel-color black
+  ]
+
+  ;; Characteristics of checkpoints
   ask check-points [
     set check-point? true
+    set automated-process? false
     set pcolor black
   ]
 
@@ -151,50 +161,61 @@ to call-trucks
     set speed 1
     set processing-start-time 0
 
-    let truck-position -17 + initial-position
+    let truck-position (x-entrance-gate-position - 1) + initial-position
     move-to patch truck-position 0
     set initial-position initial-position - 1
+
+    set classification-done false
   ]
 end
 
 to go
   report-current-phase
 
-  ifelse shift-change-period = true
-  [ ask check-points [set pcolor orange] ]
-  [ ask check-points [set pcolor black ] ]
-
   ask turtles [
     if state = "start" [
       set state "entrance-gate"
-      set init-time ticks
+      set processing-start-time ticks
+      set start-time ticks
     ]
     if state = "entrance-gate" [
-      process-checkpoint gate-processing-time "sampling" -16
+      process-checkpoint gate-processing-time "sampling" x-classification-position
     ]
     if state = "sampling" [
-      process-checkpoint sample-classification-time "classification" 0
+      process-checkpoint sampling-processing-time "classification" x-classification-position + 1
     ]
     if state = "classification" [
-      process-checkpoint classification-processing-time "first-weighing" 8
+      if ticks - processing-start-time >= classification-processing-time [
+        set classification-done true
+      ]
+      if xcor < x-first-weighing-position [
+        let truck-ahead one-of turtles-on patch-ahead 1
+        if truck-ahead = nobody
+        [fd speed ]  ;; Continue moving towards the first-weighing checkpoint
+      ]
+      if classification-done and xcor >= x-first-weighing-position [
+        set state "first-weighing"
+        set processing-start-time ticks
+        move-to patch x-first-weighing-position 0
+      ]
     ]
     if state = "first-weighing" [
-      process-checkpoint weighing-processing-time "discharge" 14
-      ;; Set the gweigh provided by the scale
-      set gross-weigth random-normal 65 2.5
+      process-checkpoint weighing-processing-time "unloading" x-unloader-position
+      ;; Set the gross weigh provided by the scale
+      set gross-weight random-normal 65 1.5
     ]
-    if state = "discharge" [
-      process-checkpoint discharge-processing-time "second-weighing" 20
+    if state = "unloading" [
+      process-checkpoint unloading-processing-time "second-weighing" x-second-weighing-position
       set color green
     ]
     if state = "second-weighing" [
-      process-checkpoint weighing-processing-time "exit-gate" 29
+      process-checkpoint weighing-processing-time "exit-gate" x-exit-gate-position
       ;; Set the tare weigh provided by the scale
-      set tare-weight random-normal 24 2
+      set tare-weight random-normal 24 1
     ]
     if state = "exit-gate" [
       if ticks - processing-start-time >= gate-processing-time [
-        move-to patch 90 0  ;; Move to a position beyond the last checkpoint
+        move-to patch (x-exit-gate-position + 5) 0  ;; Move to a position beyond the last checkpoint
         set state "end"
         set end-time ticks
 
@@ -204,15 +225,23 @@ to go
 
     if state = "end"
     [
-      show end-time - init-time
-      set total-discharged-volume total-discharged-volume + (gross-weight - tare-weight)
+      ;; Include the amount of product that was unloaded into a accumulative list
+      let net-weight-value (gross-weight - tare-weight)
+      set net-weight-lst lput net-weight-value net-weight-lst
+
+      ;; Include processing time realized for the truck into a accumulative list
+      let processing-time-value (end-time - start-time)
+      set processing-time-lst lput processing-time-value processing-time-lst
+
+      set total-unloaded-volume total-unloaded-volume + (gross-weight - tare-weight)
       die
     ]
   ]
 
-  if (processed-trucks > 0 and count turtles with [state = "entrance-gate"] = 0 and (
-    count turtles with [state = "sampling"] > 2 and count turtles with [state = "sampling"] < 5))
+  if (ticks mod 90 = 0 and count turtles with [state = "entrance-gate"] < 5)
   [ call-trucks ]
+
+  if ticks = period-of-simulation_in_days * 1440 [ stop ]
 
   tick
 end
@@ -261,6 +290,24 @@ to report-current-phase
     [set shift-change-period true]
     [set shift-change-period false]
 end
+
+to-report mean-net-weight-lst
+  ifelse length net-weight-lst > 0
+  [
+    report mean net-weight-lst
+  ]
+  [ report 0 ]
+
+end
+
+to-report mean-processing-time-lst
+  ifelse length processing-time-lst > 0
+  [
+    report mean processing-time-lst
+  ]
+  [ report 0 ]
+
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 250
@@ -271,7 +318,7 @@ GRAPHICS-WINDOW
 -1
 15.0
 1
-10
+11
 1
 1
 1
@@ -316,9 +363,9 @@ NIL
 HORIZONTAL
 
 BUTTON
-28
+17
 195
-101
+90
 228
 setup
 setup
@@ -334,9 +381,9 @@ NIL
 
 BUTTON
 112
-195
+194
 175
-228
+227
 go
 go
 T
@@ -361,10 +408,10 @@ days-counter
 11
 
 MONITOR
-14
-97
-116
-142
+16
+137
+118
+182
 Shift change?
 shift-change-period
 17
@@ -372,10 +419,10 @@ shift-change-period
 11
 
 MONITOR
-1244
-11
-1367
-56
+19
+344
+142
+389
 Entrance Gate
 count turtles with [state = \"entrance-gate\"]
 0
@@ -383,10 +430,10 @@ count turtles with [state = \"entrance-gate\"]
 11
 
 MONITOR
-1245
-62
-1369
-107
+19
+395
+143
+440
 Sampling
 count turtles with [state = \"sampling\"]
 17
@@ -394,10 +441,10 @@ count turtles with [state = \"sampling\"]
 11
 
 MONITOR
-1245
-112
-1369
-157
+19
+445
+143
+490
 Classification
 count turtles with [state = \"classification\"]
 0
@@ -405,10 +452,10 @@ count turtles with [state = \"classification\"]
 11
 
 MONITOR
-1245
-161
-1369
-206
+19
+494
+143
+539
 First Weighing
 count turtles with [state = \"first-weighing\"]
 17
@@ -416,10 +463,10 @@ count turtles with [state = \"first-weighing\"]
 11
 
 MONITOR
-1246
-258
-1370
-303
+19
+592
+143
+637
 Second Weighing
 count turtles with [state = \"second-weighing\"]
 17
@@ -427,74 +474,270 @@ count turtles with [state = \"second-weighing\"]
 11
 
 MONITOR
-1246
-209
-1369
-254
+19
+543
+142
+588
 Discharge
-count turtles with [state = \"discharge\"]
+count turtles with [state = \"unloading\"]
 17
 1
 11
 
 MONITOR
-1102
-278
-1233
-323
-Processed Trucks
+983
+303
+1231
+348
+Total Processed Trucks
 processed-trucks
 17
 1
 11
 
 MONITOR
-1100
-329
-1234
-374
-Volume
-total-discharged-volume
+981
+354
+1231
+399
+Volume Discharged Total (Tons.)
+total-unloaded-volume
 3
 1
 11
 
+MONITOR
+981
+552
+1229
+597
+Min Net Weight (Tons.)
+min net-weight-lst
+3
+1
+11
+
+MONITOR
+981
+600
+1230
+645
+Max Net Weight (Tons.)
+max net-weight-lst
+3
+1
+11
+
+MONITOR
+981
+649
+1230
+694
+Avg. Net Weight (Tons.)
+mean net-weight-lst
+3
+1
+11
+
+MONITOR
+981
+404
+1231
+449
+Avg. Total Processing Time (hours)
+mean processing-time-lst / 60
+2
+1
+11
+
+MONITOR
+981
+452
+1232
+497
+Min. Total Processing Time (hours)
+min processing-time-lst / 60
+2
+1
+11
+
+MONITOR
+981
+501
+1231
+546
+Max Total Processing Time (hours)
+max processing-time-lst / 60
+2
+1
+11
+
+TEXTBOX
+18
+304
+145
+334
+Number of trucks (By CheckPoint)
+12
+0.0
+1
+
+TEXTBOX
+985
+283
+1135
+301
+KPI's
+12
+0.0
+1
+
+PLOT
+252
+528
+609
+719
+Mean Net Weight of the Discharged Cargo
+Ticks
+Mean Weigth
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"Weighs" 1.0 0 -13791810 true "" "plot mean-net-weight-lst"
+
+PLOT
+252
+305
+608
+522
+Cycle of Trucks in Terminal - Mean
+Ticks
+Processing Time
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"Processing Time" 1.0 0 -2674135 true "" "plot mean-processing-time-lst"
+
+SLIDER
+12
+98
+233
+131
+period-of-simulation_in_days
+period-of-simulation_in_days
+1
+30
+1.0
+1
+1
+NIL
+HORIZONTAL
+
+MONITOR
+17
+243
+177
+288
+Trucks In the Terminal
+count turtles with [state != \"portaria-saida\"] - count turtles with [state = \"start\"]
+17
+1
+11
+
+PLOT
+619
+304
+959
+522
+Trucks in the Terminal
+Ticks
+Number of trucks
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -14439633 true "" "plot count turtles with [state != \"portaria-saida\"]"
+
+TEXTBOX
+251
+283
+401
+301
+Graphs
+12
+0.0
+1
+
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+This model simulates the flow of grain trucks through a multimodal terminal, llustrating the process from arrival to departure. The model includes checkpoints such as entrance gate, sampling, first weighing, unloading, second weighing, and exit gate. It aims to demonstrate the movement and processing of trucks, focusing on their interactions and the time taken at each checkpoint.
+
+This model considers that 1 tick = 1 minute.
 
 ## HOW IT WORKS
 
-(what rules the agents use to create the overall behavior of the model)
+Trucks follow a series of checkpoints, starting at the entrance gate and proceeding through sampling, classification (state), first weighing, unloading, second weighing, and exit gate. Each truck has an average speed and specific processing times at each checkpoint. The trucks move horizontally along the x-axis, and the model tracks their state, processing times, and progression through the terminal. The classification process allows the trucks to keep moving but restricts them from entering the next checkpoint until the classification is complete.
 
 ## HOW TO USE IT
 
-(how to use the model, including a description of each of the items in the Interface tab)
+### Interface Elements
+
+- **Setup Button:** Initializes the simulation, setting up the patches and creating the trucks.
+- **Go Button:** Starts the simulation, making the trucks move through the checkpoints.
+- **Length of Time Period slider:** Sets the amount of ticks thats represents a shift time
+- **Entrance Gate Time Slider:** Sets the processing time at the entrance gate.
+- **Period of Simulation in Days slider:** Sets the stop criteria in days (1 day = 1,440 ticks)
 
 ## THINGS TO NOTICE
 
-(suggested things for the user to notice while running the model)
+- Observe the movement of trucks along the x-axis and how they transition from one checkpoint to another.
+- Pay attention to how trucks continue moving during the classification state but wait for the classification process to complete before entering the first weighing checkpoint.
 
 ## THINGS TO TRY
 
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+- Adjust the sliders for processing times at various checkpoints and observe how this affects the overall flow and delays.
+- Increase the number of trucks and see how the model handles higher traffic.
+- Experiment with different average speeds for the trucks to see how speed variations impact the simulation.
 
 ## EXTENDING THE MODEL
 
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+- Add more checkpoints or states to simulate a more complex terminal process.
+- Include random delays or processing times to simulate more realistic and variable conditions.
+- Introduce interactions between trucks, such as overtaking or waiting for each other at certain points.
+- Implement different types of trucks with varying capacities and speeds to see how this diversity affects the overall process.
 
 ## NETLOGO FEATURES
 
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
+- Utilizes the patch and turtle primitives to represent checkpoints and trucks.
+- Demonstrates agent-based modeling with state transitions and movement along a defined path.
+- Employs global and turtle variables to manage state and processing times.
+- Uses conditional logic to handle state transitions and processing time checks.
 
 ## RELATED MODELS
 
-(models in the NetLogo Models Library and elsewhere which are of related interest)
+- Traffic Simulation: Similar models in the NetLogo library that simulate traffic flow and vehicle interactions.
+- Logistics and Supply Chain Models: Models that focus on supply chain management and logistics processes.
 
 ## CREDITS AND REFERENCES
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+-Model developed by Julio C. S. Lima.
+Inspired by real-world multimodal terminal operations.
+For more information and related resources, visit my Github [https://github.com/juliocslima/introduction-to-abms-final-assignment].
 @#$#@#$#@
 default
 true
