@@ -8,7 +8,7 @@
 </p>
 
 <h1 align="center">
-  <img alt="GTMTS 4.0" title="Grain Trucks Multimodal Terminal Basic Simulation" src="https://github.com/juliocslima/sds3-project/blob/main/images/grain_terminal_basic_simulation.png" />
+  <img alt="GTMTS 4.0" title="Grain Trucks Multimodal Terminal Basic Simulation" src="https://github.com/juliocslima/introduction-to-abms-final-assignment/blob/main/images/grain_terminal_basic_simulation.png" />
 </h1>
 
 Teacher: 
