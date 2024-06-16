@@ -21,11 +21,6 @@ globals [
 
   ; Times
   shift-change-time               ;; Time to execute the shift change process
-  gate-processing-time            ;; Time for execution of the truck entry or exit process
-  sampling-processing-time        ;; Time to execute the sampling process of the product to be unloaded
-  classification-processing-time  ;; Time to execute the classification process of the product to be unloaded
-  weighing-processing-time        ;; Time to execute the truck weighing process
-  unloading-processing-time       ;; Time to execute the truck unloading process
 
   check-points      ;; Points at the route where there are processes
   phase             ;; keeps track of the phase
@@ -87,13 +82,6 @@ to setup-globals
   set x-unloader-position 14
   set x-second-weighing-position 20
   set x-exit-gate-position 28
-
-  set shift-change-time 15
-  set gate-processing-time 1
-  set sampling-processing-time 6
-  set classification-processing-time 15
-  set weighing-processing-time 1
-  set unloading-processing-time 10
 
   set processed-trucks 0
   set total-unloaded-volume 0
@@ -310,10 +298,10 @@ to-report mean-processing-time-lst
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-250
+358
 10
-1232
-273
+1341
+274
 -1
 -1
 15.0
@@ -350,7 +338,7 @@ current-phase
 SLIDER
 14
 60
-231
+313
 93
 length-of-time-period
 length-of-time-period
@@ -363,10 +351,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-17
-195
-90
-228
+81
+336
+154
+369
 setup
 setup
 NIL
@@ -380,10 +368,10 @@ NIL
 1
 
 BUTTON
-112
-194
-175
-227
+176
+335
+239
+368
 go
 go
 T
@@ -408,10 +396,10 @@ days-counter
 11
 
 MONITOR
-16
-137
-118
-182
+238
+10
+340
+55
 Shift change?
 shift-change-period
 17
@@ -419,10 +407,10 @@ shift-change-period
 11
 
 MONITOR
-19
-344
-142
-389
+18
+475
+141
+520
 Entrance Gate
 count turtles with [state = \"entrance-gate\"]
 0
@@ -430,10 +418,10 @@ count turtles with [state = \"entrance-gate\"]
 11
 
 MONITOR
-19
-395
-143
-440
+18
+526
+142
+571
 Sampling
 count turtles with [state = \"sampling\"]
 17
@@ -441,10 +429,10 @@ count turtles with [state = \"sampling\"]
 11
 
 MONITOR
-19
-445
-143
-490
+18
+576
+142
+621
 Classification
 count turtles with [state = \"classification\"]
 0
@@ -452,10 +440,10 @@ count turtles with [state = \"classification\"]
 11
 
 MONITOR
-19
-494
-143
-539
+184
+474
+308
+519
 First Weighing
 count turtles with [state = \"first-weighing\"]
 17
@@ -463,10 +451,10 @@ count turtles with [state = \"first-weighing\"]
 11
 
 MONITOR
-19
-592
-143
-637
+184
+572
+308
+617
 Second Weighing
 count turtles with [state = \"second-weighing\"]
 17
@@ -474,10 +462,10 @@ count turtles with [state = \"second-weighing\"]
 11
 
 MONITOR
-19
-543
-142
-588
+184
+523
+307
+568
 Discharge
 count turtles with [state = \"unloading\"]
 17
@@ -485,9 +473,9 @@ count turtles with [state = \"unloading\"]
 11
 
 MONITOR
-983
+1091
 303
-1231
+1339
 348
 Total Processed Trucks
 processed-trucks
@@ -496,9 +484,9 @@ processed-trucks
 11
 
 MONITOR
-981
+1089
 354
-1231
+1339
 399
 Volume Discharged Total (Tons.)
 total-unloaded-volume
@@ -507,9 +495,9 @@ total-unloaded-volume
 11
 
 MONITOR
-981
+1089
 552
-1229
+1337
 597
 Min Net Weight (Tons.)
 min net-weight-lst
@@ -518,9 +506,9 @@ min net-weight-lst
 11
 
 MONITOR
-981
+1089
 600
-1230
+1338
 645
 Max Net Weight (Tons.)
 max net-weight-lst
@@ -529,9 +517,9 @@ max net-weight-lst
 11
 
 MONITOR
-981
+1089
 649
-1230
+1338
 694
 Avg. Net Weight (Tons.)
 mean net-weight-lst
@@ -540,9 +528,9 @@ mean net-weight-lst
 11
 
 MONITOR
-981
+1089
 404
-1231
+1339
 449
 Avg. Total Processing Time (hours)
 mean processing-time-lst / 60
@@ -551,9 +539,9 @@ mean processing-time-lst / 60
 11
 
 MONITOR
-981
+1089
 452
-1232
+1340
 497
 Min. Total Processing Time (hours)
 min processing-time-lst / 60
@@ -562,9 +550,9 @@ min processing-time-lst / 60
 11
 
 MONITOR
-981
+1089
 501
-1231
+1339
 546
 Max Total Processing Time (hours)
 max processing-time-lst / 60
@@ -573,19 +561,19 @@ max processing-time-lst / 60
 11
 
 TEXTBOX
-18
-304
-145
-334
+15
+443
+298
+473
 Number of trucks (By CheckPoint)
 12
 0.0
 1
 
 TEXTBOX
-985
+1093
 283
-1135
+1243
 301
 KPI's
 12
@@ -593,9 +581,9 @@ KPI's
 1
 
 PLOT
-252
+360
 528
-609
+717
 719
 Mean Net Weight of the Discharged Cargo
 Ticks
@@ -611,9 +599,9 @@ PENS
 "Weighs" 1.0 0 -13791810 true "" "plot mean-net-weight-lst"
 
 PLOT
-252
+360
 305
-608
+716
 522
 Cycle of Trucks in Terminal - Mean
 Ticks
@@ -631,7 +619,7 @@ PENS
 SLIDER
 12
 98
-233
+313
 131
 period-of-simulation_in_days
 period-of-simulation_in_days
@@ -644,10 +632,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-17
-243
-177
-288
+81
+384
+241
+429
 Trucks In the Terminal
 count turtles with [state != \"portaria-saida\"] - count turtles with [state = \"start\"]
 17
@@ -655,9 +643,9 @@ count turtles with [state != \"portaria-saida\"] - count turtles with [state = \
 11
 
 PLOT
-619
+727
 304
-959
+1067
 522
 Trucks in the Terminal
 Ticks
@@ -673,14 +661,89 @@ PENS
 "default" 1.0 0 -14439633 true "" "plot count turtles with [state != \"portaria-saida\"]"
 
 TEXTBOX
-251
-283
-401
-301
+358
+281
+508
+299
 Graphs
 12
 0.0
 1
+
+SLIDER
+11
+136
+312
+169
+gate-processing-time
+gate-processing-time
+1
+10
+1.0
+1
+1
+min
+HORIZONTAL
+
+SLIDER
+11
+176
+313
+209
+sampling-processing-time
+sampling-processing-time
+5
+20
+6.0
+1
+1
+min
+HORIZONTAL
+
+SLIDER
+11
+215
+314
+248
+classification-processing-time
+classification-processing-time
+1
+30
+15.0
+1
+1
+min
+HORIZONTAL
+
+SLIDER
+10
+254
+314
+287
+weighing-processing-time
+weighing-processing-time
+1
+10
+1.0
+1
+1
+min
+HORIZONTAL
+
+SLIDER
+11
+291
+313
+324
+unloading-processing-time
+unloading-processing-time
+1
+20
+10.0
+1
+1
+min
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -697,11 +760,16 @@ Trucks follow a series of checkpoints, starting at the entrance gate and proceed
 
 ### Interface Elements
 
-- **Setup Button:** Initializes the simulation, setting up the patches and creating the trucks.
-- **Go Button:** Starts the simulation, making the trucks move through the checkpoints.
 - **Length of Time Period slider:** Sets the amount of ticks thats represents a shift time
 - **Entrance Gate Time Slider:** Sets the processing time at the entrance gate.
 - **Period of Simulation in Days slider:** Sets the stop criteria in days (1 day = 1,440 ticks)
+- **Gate Processing Time Slider**: Sets the processing time at the entrance and exit gate.
+- **Sampling Processing Time Slider**: Sets the processing time at the sampling checkpoint.
+- **Classification Processing Time Slider**: Sets the processing time for the classification state.
+- **Weighing Processing Time Slider**: Sets the processing time at the first and second weighing checkpoint.
+- **Unloading Processing Time Slider**: Sets the processing time at the unloading checkpoint.
+- **Setup Button**: Initializes the simulation, setting up the patches and creating the trucks.
+- **Go Button**: Starts the simulation, making the trucks move through the checkpoints.
 
 ## THINGS TO NOTICE
 
