@@ -1,4 +1,4 @@
-; Global variables for processing times
+; Global variables
 globals [
   ; phase counter
   all-phases
@@ -11,7 +11,7 @@ globals [
   ; Operation
   shift-change-period
 
-  ; Structure
+  ; Terminal Structure
   x-entrance-gate-position
   x-classification-position
   x-first-weighing-position
@@ -20,21 +20,21 @@ globals [
   x-exit-gate-position
 
   ; Times
-  shift-change-time               ;; Time to execute the shift change process
+  shift-change-time           ;; Time to execute the shift change process
 
-  check-points      ;; Points at the route where there are processes
-  phase             ;; keeps track of the phase
-  routes            ;; agentset containing the patches that are routes
+  check-points                ;; Points at the route where there are processes
+  phase                       ;; keeps track of the phase
+  routes                      ;; agentset containing the patches that are routes
 
   ;; KPIs
-  processed-trucks           ;; Number of trucks that the processment was completed
-  total-unloaded-volume    ;; Amount of cargo that was unloaded
+  processed-trucks            ;; Number of trucks that the processment was completed
+  total-unloaded-volume       ;; Amount of cargo that was unloaded
 
-  net-weight-lst             ;; List that contain the net weight that was unloaded
-                             ;; for all trucks that the processing was completed
+  net-weight-lst              ;; List that contain the net weight that was unloaded
+                              ;; for all trucks that the processing was completed
 
-  processing-time-lst        ;; List that contain the processing time for all trucks
-                             ;; that the processing was completed
+  processing-time-lst         ;; List that contain the processing time for all trucks
+                              ;; that the processing was completed
 ]
 
 turtles-own [
@@ -43,7 +43,6 @@ turtles-own [
   tare-weight            ;; Tare weight of the truck
   net-weight             ;; Net weight of the truck
   speed                  ;; Average truck speed
-  up-car?                ;; true if the turtle moves downwards and false if it moves to the right
   processing-start-time  ;; Processing start time
   start-time             ;; Truck processing start time
   end-time               ;; Truck processing end time
@@ -625,7 +624,7 @@ period-of-simulation_in_days
 period-of-simulation_in_days
 1
 30
-1.0
+7.0
 1
 1
 NIL
@@ -709,7 +708,7 @@ classification-processing-time
 classification-processing-time
 1
 30
-15.0
+10.0
 1
 1
 min
@@ -748,7 +747,7 @@ HORIZONTAL
 @#$#@#$#@
 ## WHAT IS IT?
 
-This model simulates the flow of grain trucks through a multimodal terminal, llustrating the process from arrival to departure. The model includes checkpoints such as entrance gate, sampling, first weighing, unloading, second weighing, and exit gate. It aims to demonstrate the movement and processing of trucks, focusing on their interactions and the time taken at each checkpoint.
+This model simulates the flow of grain trucks through a multimodal terminal, llustrating the First-In-First-Out (FIFO) process from arrival to departure. The model includes checkpoints such as entrance gate, sampling, first weighing, unloading, second weighing, and exit gate. It aims to demonstrate the movement and processing of trucks, focusing on their interactions and the time taken at each checkpoint.
 
 This model considers that 1 tick = 1 minute.
 
@@ -1116,6 +1115,42 @@ NetLogo 6.4.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="experiment" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>count turtles with [state = "entrance-gate"]</metric>
+    <metric>count turtles with [state = "sampling"]</metric>
+    <metric>count turtles with [state = "classification"]</metric>
+    <metric>count turtles with [state = "first-weighing"]</metric>
+    <metric>count turtles with [state = "unloading"]</metric>
+    <metric>count turtles with [state = "second-weighing"]</metric>
+    <metric>count turtles with [state = "exit-gate"]</metric>
+    <metric>mean-processing-time-lst</metric>
+    <metric>mean-net-weight-lst</metric>
+    <enumeratedValueSet variable="period-of-simulation_in_days">
+      <value value="7"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="length-of-time-period">
+      <value value="480"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="weighing-processing-time">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="classification-processing-time">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="unloading-processing-time">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="sampling-processing-time">
+      <value value="6"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="gate-processing-time">
+      <value value="1"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
