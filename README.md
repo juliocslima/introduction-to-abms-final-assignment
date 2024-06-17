@@ -11,13 +11,9 @@
   <img alt="GTMTS 4.0" title="Grain Trucks Multimodal Terminal Basic Simulation" src="https://github.com/juliocslima/introduction-to-abms-final-assignment/blob/main/images/grain_terminal_basic_simulation.png" />
 </h1>
 
-Teacher: 
-[Eric Araújo, PhD](https://orcid.org/0000-0003-4263-9075)
+Teacher: [Eric Araújo, PhD](https://orcid.org/0000-0003-4263-9075)[^1]
 
-Student: 
-[Julio C. S. Lima](http://lattes.cnpq.br/2520521178972799)
-Master's degree in Systems and Automation Engineering
-Federal University of Lavras, UFLA, Brazil.
+Student: [Julio C. S. Lima](http://lattes.cnpq.br/2520521178972799)[^2]
 
 ## Overview
 
@@ -121,3 +117,6 @@ Trucks move horizontally along the x-axis, transitioning from one state to anoth
 - Model developed by Julio C. S. Lima.
 - Inspired by real-world multimodal terminal operations.
 - For more information and related resources, visit my [Github](https://github.com/juliocslima/introduction-to-abms-final-assignment).
+
+[^1]: Associate Professor - Federal University from Lavras - UFLA, Brazil.
+[^2]: Master's degree in Systems and Automation Engineering - Federal University of Lavras, UFLA, Brazil.
